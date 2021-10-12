@@ -1,2 +1,2 @@
-# cutaway-backend
+# Cutaway Backend
 Core of Cutaway service
