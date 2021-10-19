@@ -69,6 +69,19 @@ def delete_user(username: str, passphrase="", db: Session = Depends(get_db)):
         raise fastapi.HTTPException(403, "You are not allowed to delete users")
 
 
+@app.delete("/user/{username}/link/{link}", response_model=schemas.Status,
+                                            responses={404: {"model": schemas.Status}})
+def delete_link(username: str, link: str, db: Session = Depends(get_db)):
+    user = crud.get_user(db, username=username)
+    if user:
+        if crud.delete_user_link(db, link, user.id):
+            return {"push_status": True, "message": link + " link of user @" + username + " deleted"}
+        else:
+            return JSONResponse({"push_status": False, "message": "Link not found for user @" + username}, 404)
+    else:
+        return JSONResponse({"push_status": False, "message": "User not found"}, 404)
+
+
 def transform_links(links: List[models.Link]) -> dict:
     result = {}
     for link in links:

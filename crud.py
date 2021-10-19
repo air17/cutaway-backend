@@ -41,6 +41,7 @@ def create_user(db: Session, user: schemas.UserBase) -> models.User:
 
 
 def edit_user(db: Session, username, user: schemas.UserEdit):
+
     def add_links(link_dict, user_id, additional=False):
         for link_name in list(link_dict.keys()):
             create_user_link(db, link_name, link_dict[link_name], user_id, additional)
@@ -101,6 +102,18 @@ def create_user_link(db: Session, name: str, address: str, user_id: int, additio
     db.commit()
 
     return {"success": True, "updated": updated}
+
+
+def delete_user_link(db: Session, name: str, user_id: int) -> bool:
+    statement = select(models.Link).filter(models.Link.user_id == user_id,
+                                           models.Link.name == name)
+    link = db.execute(statement).scalar_one_or_none()
+    if link:
+        db.delete(link)
+        db.commit()
+        return True
+    else:
+        return False
 
 
 def delete_user(db: Session, username: str) -> bool:
