@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -49,7 +49,7 @@ def create_user(db: Session, user: schemas.UserBase) -> models.User:
 
 def edit_user(db: Session, username: str, user: schemas.UserEdit):
 
-    def add_links(link_dict, user_id, additional=False):
+    def add_links(link_dict: Dict[str, str], user_id: int, additional=False) -> None:
         for link_name in list(link_dict.keys()):
             create_user_link(db, link_name, link_dict[link_name], user_id, additional)
 
@@ -69,17 +69,15 @@ def edit_user(db: Session, username: str, user: schemas.UserEdit):
             user_model.google_id = user.google_id
         if user.about is not None:
             user_model.about = user.about
-        # TODO: upload pictures
-        if user.user_pic is not None:
-            user_model.user_pic = user.user_pic
-        if user.bg_pic is not None:
-            user_model.bg_pic = user.bg_pic
+
         db.commit()
+
         # Update links
         if user.links:
             add_links(user.links, user_model.id)
         if user.additional_links:
             add_links(user.additional_links, user_model.id, additional=True)
+
         return True
     else:
         return None
@@ -92,7 +90,7 @@ def get_user_links(db: Session, user_id: int, additional: bool = False) -> List[
 
 
 def create_user_link(db: Session, name: str, address: str, user_id: int, additional=False):
-    updated = False # indicates that link is updated instead of created
+    updated = False  # indicates that link is updated instead of created
     # Check if link title doesn't exist for the user
     all_user_links = get_user_links(db, user_id) + get_user_links(db, user_id, additional=True)
     for link in all_user_links:
@@ -131,3 +129,15 @@ def delete_user(db: Session, username: str) -> bool:
         return True
     else:
         return False
+
+
+def add_picture_to_db(db: Session, filename: str, pic_type: str, user_id: int) -> bool:
+    user = get_user(db, user_id=user_id)
+    if pic_type == "avatar":
+        user.user_pic = "static/avatars/"+filename
+    elif pic_type == "background":
+        user.bg_pic = "static/bg-pictures/"+filename
+    else:
+        raise Exception("Wrong pic_type")
+    db.commit()
+    return True

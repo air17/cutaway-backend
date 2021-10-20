@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import Optional, Dict
 
 from pydantic import BaseModel, EmailStr
 
@@ -39,8 +39,6 @@ class UserEdit(BaseModel):
     username: Optional[str]
     google_id: Optional[str]
     about: Optional[str]
-    user_pic: Optional[str]
-    bg_pic: Optional[str]
     links: Optional[Dict[str, str]]
     additional_links: Optional[Dict[str, str]]
 
