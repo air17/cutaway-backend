@@ -1,2 +1,2 @@
 # Cutaway Backend
-Core of Cutaway service
+To start server run: `uvicorn main:app`
