@@ -27,8 +27,15 @@ def get_user(db: Session,
     return db.execute(statement).scalar_one_or_none()
 
 
-def get_users(db: Session) -> List[models.User]:
-    statement = select(models.User)
+def get_users(db: Session, skip: int = 0, limit: int = 1000) -> List[models.User]:
+    statement = select(models.User).offset(skip).limit(limit)
+    return db.execute(statement).scalars().all()
+
+
+def get_users_by_username(db: Session, username: str) -> List[models.User]:
+    statement = select(models.User)\
+                .filter(models.User.username.like(f"%{username}%"))\
+                .limit(100)
     return db.execute(statement).scalars().all()
 
 
@@ -40,7 +47,7 @@ def create_user(db: Session, user: schemas.UserBase) -> models.User:
     return new_user
 
 
-def edit_user(db: Session, username, user: schemas.UserEdit):
+def edit_user(db: Session, username: str, user: schemas.UserEdit):
 
     def add_links(link_dict, user_id, additional=False):
         for link_name in list(link_dict.keys()):

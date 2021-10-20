@@ -25,8 +25,13 @@ def get_db():
 
 
 @app.get("/users", response_model=List[schemas.UserBase])
-def get_users(db: Session = Depends(get_db)):
-    return crud.get_users(db)
+def get_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 1000):
+    return crud.get_users(db, skip, limit)
+
+
+@app.get("/users/{username}", response_model=List[schemas.UserShort])
+def get_users_by_username(username, db: Session = Depends(get_db)):
+    return crud.get_users_by_username(db, username)
 
 
 @app.get("/user/{email}", response_model=Optional[schemas.User])
@@ -44,7 +49,7 @@ def create_user(user: schemas.UserBase, db: Session = Depends(get_db)):
                             "message": f"User @{user.username} already exists"}, 409)
     elif crud.get_user(db, user_email=user.email):
         return JSONResponse({"push_status": False,
-                            "message": f"Email {user.email} already exists"}, 409)
+                            "message": "The user with such email already exists"}, 409)
     crud.create_user(db, user)
     return {"push_status": True, "message": f"User @{user.username} created"}
 
