@@ -46,10 +46,12 @@ def save(file, filename, pic_type) -> str:
 
     normalize_size(pic, pic_type)
 
+    pic.convert("RGB")
+
     if not os.path.exists(filepath):
         os.mkdir(filepath)
 
-    pic.save(filepath + filename, "JPEG")
+    pic.save(filepath + filename, "WEBP")
 
     return filepath + filename
 
@@ -67,4 +69,4 @@ def delete(pic_path: str, pic_type: str) -> bool:
 
 def generate_name(user_id):
     random_string = uuid.uuid4().hex
-    return f"{user_id}_{random_string}.jpg"
+    return f"{user_id}_{random_string}.webp"

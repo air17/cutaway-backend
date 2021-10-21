@@ -14,7 +14,7 @@ from settings import STATIC_PATH
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+app = FastAPI(title="Cutaway", version="alpha")
 
 if not path.exists(STATIC_PATH):
     mkdir(STATIC_PATH)
@@ -41,7 +41,7 @@ def get_users_by_username(username, db: Session = Depends(get_db)):
 
 
 @app.get("/user/{username}", response_model=Optional[schemas.User])
-def get_user_by_username(username: str, db: Session = Depends(get_db)):
+def get_user_details_by_username(username: str, db: Session = Depends(get_db)):
     user = crud.get_user(db, username=username)
     if user:
         user.links = transform_links(crud.get_user_links(db, user.id))
@@ -64,7 +64,7 @@ def create_user(user: schemas.UserBase, db: Session = Depends(get_db)):
 @app.post("/files", response_model=schemas.Status, responses={400: {"model": schemas.Status},
                                                               404: {"model": schemas.Status},
                                                               422: {"model": schemas.Status}})
-def create_picture(username: str, pic_type: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+def add_picture(username: str, pic_type: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
     user = crud.get_user(db, username=username)
     if pic_type in ("avatar", "background"):
         if user:
