@@ -63,8 +63,11 @@ def delete(pic_path: str, pic_type: str) -> bool:
         path = os.path.join(STATIC_PATH, "bg-pictures", os.path.basename(pic_path))
     else:
         raise Exception
-    remove(path)
-    return True
+    try:
+        remove(path)
+        return True
+    except FileNotFoundError:
+        return False
 
 
 def generate_name(user_id):
