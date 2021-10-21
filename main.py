@@ -10,12 +10,12 @@ import models
 import pictures
 import schemas
 from database import engine, SessionLocal
+from settings import STATIC_PATH
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-STATIC_PATH = "static"
 if not path.exists(STATIC_PATH):
     mkdir(STATIC_PATH)
 app.mount("/static", StaticFiles(directory=STATIC_PATH), name="static")

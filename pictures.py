@@ -3,7 +3,7 @@ import uuid
 from os import remove
 from PIL import Image, UnidentifiedImageError
 
-from main import STATIC_PATH
+from settings import STATIC_PATH
 
 
 def is_valid(file) -> bool:
