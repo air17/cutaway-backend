@@ -40,9 +40,9 @@ def get_users_by_username(username, db: Session = Depends(get_db)):
     return crud.get_users_by_username(db, username)
 
 
-@app.get("/user/{email}", response_model=Optional[schemas.User])
-def get_user_by_email(email: str, db: Session = Depends(get_db)):
-    user = crud.get_user(db, user_email=email)
+@app.get("/user/{username}", response_model=Optional[schemas.User])
+def get_user_by_username(username: str, db: Session = Depends(get_db)):
+    user = crud.get_user(db, username=username)
     if user:
         user.links = transform_links(crud.get_user_links(db, user.id))
         user.additional_links = transform_links(crud.get_user_links(db, user.id, additional=True))

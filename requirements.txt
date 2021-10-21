@@ -2,5 +2,6 @@ fastapi
 pydantic[email]
 uvicorn
 sqlalchemy
+mysqlclient
 python-multipart
 Pillow
