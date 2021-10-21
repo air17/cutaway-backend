@@ -1,5 +1,6 @@
+from os import path, mkdir
 from typing import List, Optional
-from fastapi import Depends, HTTPException, FastAPI, UploadFile, File
+from fastapi import Depends, FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -14,7 +15,10 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+STATIC_PATH = "static"
+if not path.exists(STATIC_PATH):
+    mkdir(STATIC_PATH)
+app.mount("/static", StaticFiles(directory=STATIC_PATH), name="static")
 
 
 # FastAPI specific function which ensures closing connection after each request
@@ -68,13 +72,13 @@ def create_picture(username: str, pic_type: str, file: UploadFile = File(...), d
                 if pic_type == "avatar":
                     if pictures.is_square(file.file):
                         if user.user_pic:
-                            pictures.delete(user.user_pic)
+                            pictures.delete(user.user_pic, pic_type)
                     else:
                         return JSONResponse(push_status(False, "The picture should be squared"), 422)
                 elif pic_type == "background":
                     if pictures.is_square(file.file) or pictures.is_landscape(file.file):
                         if user.bg_pic:
-                            pictures.delete(user.bg_pic)
+                            pictures.delete(user.bg_pic, pic_type)
                     else:
                         return JSONResponse(push_status(False, "The picture should be squared or landscape"), 422)
                 else:
@@ -108,11 +112,10 @@ def delete_user(username: str, passphrase="", db: Session = Depends(get_db)):
         else:
             return push_status(True, f"User @{username} deleted")
     else:
-        return JSONResponse(push_status(False, f"User @{username} not found"), 403)
+        return JSONResponse(push_status(False, f"You are not allowed"), 403)
 
 
-@app.delete("/user/{username}/link/{link}", response_model=schemas.Status,
-                                            responses={404: {"model": schemas.Status}})
+@app.delete("/user/{username}/link/{link}", response_model=schemas.Status, responses={404: {"model": schemas.Status}})
 def delete_link(username: str, link: str, db: Session = Depends(get_db)):
     user = crud.get_user(db, username=username)
     if user:
