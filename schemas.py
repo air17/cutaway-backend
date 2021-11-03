@@ -12,18 +12,20 @@ class UserBase(BaseModel):
     first_name: str
     last_name: str
     username: str
-    google_id: Optional[str]
 
     class Config:
         orm_mode = True
 
 
 class UserShort(UserBase):
-    user_pic: Optional[str]
-
-
-class User(UserBase):
     id: int
+    user_pic: Optional[str]
+    followers_number: Optional[int]
+
+
+class UserFull(UserBase):
+    id: int
+    google_id: Optional[str]
     about: Optional[str]
     user_pic: Optional[str]
     bg_pic: Optional[str]

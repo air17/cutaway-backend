@@ -35,12 +35,17 @@ def get_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 1000):
     return crud.get_users(db, skip, limit)
 
 
+@app.get("/users/top", response_model=List[schemas.UserShort])
+def get_users(db: Session = Depends(get_db), limit: int = 5):
+    return crud.get_top_users(db, limit)
+
+
 @app.get("/users/{username}", response_model=List[schemas.UserShort])
 def get_users_by_username(username, db: Session = Depends(get_db)):
     return crud.get_users_by_username(db, username)
 
 
-@app.get("/user/{username}", response_model=Optional[schemas.User])
+@app.get("/user/{username}", response_model=Optional[schemas.UserFull])
 def get_user_details_by_username(username: str, db: Session = Depends(get_db)):
     user = crud.get_user(db, username=username)
     if user:
@@ -48,7 +53,7 @@ def get_user_details_by_username(username: str, db: Session = Depends(get_db)):
         user.additional_links = transform_links(crud.get_user_links(db, user.id, additional=True))
         return user
     else:
-        JSONResponse("User not found", 404)
+        return JSONResponse("User not found", 404)
 
 
 @app.post("/users", response_model=schemas.Status, responses={409: {"model": schemas.Status}})
@@ -59,6 +64,20 @@ def create_user(user: schemas.UserBase, db: Session = Depends(get_db)):
         return JSONResponse(push_status(False, "The user with such email already exists"), 409)
     crud.create_user(db, user)
     return push_status(True, f"User @{user.username} created")
+
+
+@app.post("/user/follow/{user_id}", response_model=schemas.Status)
+def follow_user(user_id: int, follower_id: int, db: Session = Depends(get_db)):
+    crud.make_follower(db, follower_id=follower_id, followed_id=user_id)
+    return push_status(True, f"User {follower_id} followed user {user_id}")
+
+
+@app.delete("/user/unfollow/{user_id}", response_model=schemas.Status, responses={404: {"model": schemas.Status}})
+def unfollow_user(user_id: int, follower_id: int, db: Session = Depends(get_db)):
+    if crud.delete_follower(db, follower_id=follower_id, followed_id=user_id):
+        return push_status(True, f"User {follower_id} unfollowed user {user_id}")
+    else:
+        return JSONResponse(push_status(False, f"The follower/followed pair not found"), 404)
 
 
 @app.post("/files", response_model=schemas.Status, responses={400: {"model": schemas.Status},

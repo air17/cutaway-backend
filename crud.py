@@ -23,13 +23,34 @@ def get_user(db: Session,
     elif user_id is not None:
         statement = statement.where(models.User.id == user_id)
     else:
-        raise Exception("No search query")
-    return db.execute(statement).scalar_one_or_none()
+        raise Exception("Search query not specified")
+    user = db.execute(statement).scalar_one_or_none()
+    if user:
+        user.followers_number = get_followers_number(db, user.id)
+    return user
 
 
 def get_users(db: Session, skip: int = 0, limit: int = 1000) -> List[models.User]:
     statement = select(models.User).offset(skip).limit(limit)
-    return db.execute(statement).scalars().all()
+    users = db.execute(statement).scalars().all()
+    for user in users:
+        user.followers_number = get_followers_number(db, user.id)
+    return users
+
+
+def get_top_users(db: Session, limit: int = 5) -> List[models.User]:
+    statement = f"""
+    SELECT user_id
+    FROM followers
+    GROUP BY user_id
+    ORDER BY count(*) DESC
+    LIMIT {limit}"""
+
+    top_users_ids: list = db.execute(statement).scalars().all()
+    top_users = []
+    for user_id in top_users_ids:
+        top_users.append(get_user(db, user_id=user_id))
+    return top_users
 
 
 def get_users_by_username(db: Session, username: str) -> List[models.User]:
@@ -141,3 +162,26 @@ def add_picture_to_db(db: Session, filename: str, pic_type: str, user_id: int) -
         raise Exception("Wrong pic_type")
     db.commit()
     return True
+
+
+def get_followers_number(db, user_id) -> int:
+    statement = f"SELECT count(*) FROM followers WHERE user_id={user_id}"
+    return db.execute(statement).scalar_one()
+
+
+def make_follower(db, follower_id, followed_id):
+    new_follower = models.Followers(user_id=followed_id, follower_id=follower_id)
+    db.add(new_follower)
+    db.commit()
+
+
+def delete_follower(db, follower_id, followed_id):
+    statement = select(models.Followers).where(models.Followers.user_id == followed_id,
+                                               models.Followers.follower_id == follower_id)
+    follow = db.execute(statement).scalar_one_or_none()
+    if follow:
+        db.delete(follow)
+        db.commit()
+        return True
+    else:
+        return False
