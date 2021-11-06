@@ -29,8 +29,6 @@ def normalize_size(pic: Image.Image, pic_type: str) -> Image.Image:
         pic = pic.resize((512, 512))
     elif pic_type == "background":
         pic = pic.resize((1024, int(1024 / (pic.width / pic.height))))
-    else:
-        raise Exception
     return pic
 
 

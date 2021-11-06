@@ -170,9 +170,16 @@ def get_followers_number(db, user_id) -> int:
 
 
 def make_follower(db, follower_id, followed_id):
-    new_follower = models.Followers(user_id=followed_id, follower_id=follower_id)
-    db.add(new_follower)
-    db.commit()
+    statement = select(models.Followers).where(models.Followers.user_id == followed_id,
+                                               models.Followers.follower_id == follower_id)
+    follow = db.execute(statement).scalar_one_or_none()
+    if not follow:
+        new_follower = models.Followers(user_id=followed_id, follower_id=follower_id)
+        db.add(new_follower)
+        db.commit()
+        return True
+    else:
+        return False
 
 
 def delete_follower(db, follower_id, followed_id):

@@ -1,5 +1,5 @@
 **/.idea
 **/__pycache__
-mybase.db
 static/avatars
 static/bg-pictures
+.pytest_cache

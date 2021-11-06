@@ -8,8 +8,10 @@ Requirement: Python 3.6 or newer
 
 Install dependencies: `pip install -r requirements.txt`<br>
 Start the server: `uvicorn main:app`
+####Testing
+Pytest required:`pip install pytest`
 
-Run the tests: `pytest`
+Run the tests: `pytest tests.py`
 
 ## Usage
 

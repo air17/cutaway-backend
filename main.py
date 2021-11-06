@@ -32,15 +32,21 @@ def get_db():
 
 @app.get("/users", response_model=List[schemas.UserBase])
 def get_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 1000):
+    """
+    Get all the users:
+
+    - **skip**: skip first N users
+    - **limit**: limit number of users retrieved (default 1000)
+    """
     return crud.get_users(db, skip, limit)
 
 
-@app.get("/users/top", response_model=List[schemas.UserShort])
-def get_users(db: Session = Depends(get_db), limit: int = 5):
+@app.get("/users/top", response_model=List[Optional[schemas.UserShort]])
+def get_top_users(db: Session = Depends(get_db), limit: int = 5):
     return crud.get_top_users(db, limit)
 
 
-@app.get("/users/{username}", response_model=List[schemas.UserShort])
+@app.get("/users/{username}", response_model=List[Optional[schemas.UserShort]])
 def get_users_by_username(username, db: Session = Depends(get_db)):
     return crud.get_users_by_username(db, username)
 
@@ -66,10 +72,14 @@ def create_user(user: schemas.UserBase, db: Session = Depends(get_db)):
     return push_status(True, f"User @{user.username} created")
 
 
-@app.post("/user/follow/{user_id}", response_model=schemas.Status)
+@app.post("/user/follow/{user_id}", response_model=schemas.Status, responses={409: {"model": schemas.Status}})
 def follow_user(user_id: int, follower_id: int, db: Session = Depends(get_db)):
-    crud.make_follower(db, follower_id=follower_id, followed_id=user_id)
-    return push_status(True, f"User {follower_id} followed user {user_id}")
+    if user_id == follower_id:
+        return JSONResponse(push_status(False, f"You cannot follow yourself"), 409)
+    if crud.make_follower(db, follower_id=follower_id, followed_id=user_id):
+        return push_status(True, f"User {follower_id} followed user {user_id}")
+    else:
+        return JSONResponse(push_status(False, "The user is already being followed"), 409)
 
 
 @app.delete("/user/unfollow/{user_id}", response_model=schemas.Status, responses={404: {"model": schemas.Status}})
@@ -77,7 +87,7 @@ def unfollow_user(user_id: int, follower_id: int, db: Session = Depends(get_db))
     if crud.delete_follower(db, follower_id=follower_id, followed_id=user_id):
         return push_status(True, f"User {follower_id} unfollowed user {user_id}")
     else:
-        return JSONResponse(push_status(False, f"The follower/followed pair not found"), 404)
+        return JSONResponse(push_status(False, f"The user is not being followed"), 404)
 
 
 @app.post("/files", response_model=schemas.Status, responses={400: {"model": schemas.Status},
@@ -100,8 +110,7 @@ def add_picture(username: str, pic_type: str, file: UploadFile = File(...), db: 
                             pictures.delete(user.bg_pic, pic_type)
                     else:
                         return JSONResponse(push_status(False, "The picture should be squared or landscape"), 422)
-                else:
-                    raise Exception("Wrong pic_type")
+
                 filename = pictures.generate_name(user.id)
                 pictures.save(file.file, filename, pic_type)
                 crud.add_picture_to_db(db, filename, pic_type, user.id)
@@ -123,8 +132,8 @@ def edit_user(username: str, user: schemas.UserEdit, db: Session = Depends(get_d
 
 
 @app.delete("/user/{username}", response_model=schemas.Status,
-            responses={404: {"model": schemas.Status}, 403: {"model": str}})
-def delete_user(username: str, passphrase="", db: Session = Depends(get_db)):
+            responses={404: {"model": schemas.Status}, 403: {"model": schemas.Status}})
+def delete_user(username: str, passphrase: str = "", db: Session = Depends(get_db)):
     if passphrase == "imanicetelegrambotmadebykarchx":
         if not crud.delete_user(db, username):
             return JSONResponse(push_status(False, f"User @{username} not found"), 404)
