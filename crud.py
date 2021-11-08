@@ -6,6 +6,13 @@ import schemas
 import models
 
 
+def transform_links(links: List[models.Link]) -> dict:
+    result = {}
+    for link in links:
+        result.update({link.name: link.link})
+    return result
+
+
 def get_user(db: Session,
              user_email: str = None,
              username: str = None,
@@ -27,6 +34,8 @@ def get_user(db: Session,
     user = db.execute(statement).scalar_one_or_none()
     if user:
         user.followers_number = get_followers_number(db, user.id)
+        user.links = transform_links(get_user_links(db, user.id))
+        user.additional_links = transform_links(get_user_links(db, user.id, additional=True))
     return user
 
 

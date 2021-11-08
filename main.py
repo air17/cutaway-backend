@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta
 from os import path, mkdir
 from typing import List, Optional
+from jose import jwt, JWTError
+from sqlalchemy.orm import Session
+
 from fastapi import Depends, FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
-from sqlalchemy.orm import Session
 
 import crud
 import models
@@ -134,12 +135,9 @@ def get_users_by_username(username, _=Depends(get_current_user), db: Session = D
 @app.get("/user/{username}", response_model=Optional[schemas.UserFull])
 def get_user_details_by_username(username: str, _=Depends(get_current_user), db: Session = Depends(get_db)):
     user = crud.get_user(db, username=username)
-    if user:
-        user.links = transform_links(crud.get_user_links(db, user.id))
-        user.additional_links = transform_links(crud.get_user_links(db, user.id, additional=True))
-        return user
-    else:
+    if not user:
         return JSONResponse("User not found", 404)
+    return user
 
 
 @app.post("/users", response_model=schemas.Status, responses={409: {"model": schemas.Status}})
@@ -153,7 +151,8 @@ def create_user(user: schemas.UserBase, db: Session = Depends(get_db)):
 
 
 @app.post("/user/follow/{user_id}", response_model=schemas.Status, responses={409: {"model": schemas.Status}})
-def follow_user(user_id: int, current_user: schemas.UserShort = Depends(get_current_user), db: Session = Depends(get_db)):
+def follow_user(user_id: int,
+                current_user: schemas.UserShort = Depends(get_current_user), db: Session = Depends(get_db)):
     follower_id = current_user.id
     if user_id == follower_id:
         return JSONResponse(push_status(False, f"You cannot follow yourself"), 409)
@@ -164,7 +163,8 @@ def follow_user(user_id: int, current_user: schemas.UserShort = Depends(get_curr
 
 
 @app.delete("/user/unfollow/{user_id}", response_model=schemas.Status, responses={404: {"model": schemas.Status}})
-def unfollow_user(user_id: int, current_user: schemas.UserShort = Depends(get_current_user),  db: Session = Depends(get_db)):
+def unfollow_user(user_id: int,
+                  current_user: schemas.UserShort = Depends(get_current_user),  db: Session = Depends(get_db)):
     follower_id = current_user.id
     if crud.delete_follower(db, follower_id=follower_id, followed_id=user_id):
         return push_status(True, f"You unfollowed user {user_id}")
@@ -175,7 +175,8 @@ def unfollow_user(user_id: int, current_user: schemas.UserShort = Depends(get_cu
 @app.post("/files", response_model=schemas.Status, responses={400: {"model": schemas.Status},
                                                               404: {"model": schemas.Status},
                                                               422: {"model": schemas.Status}})
-def add_picture(pic_type: str, file: UploadFile = File(...), user: schemas.UserFull = Depends(get_current_user), db: Session = Depends(get_db)):
+def add_picture(pic_type: str, file: UploadFile = File(...),
+                user: schemas.UserFull = Depends(get_current_user), db: Session = Depends(get_db)):
     if pic_type in ("avatar", "background"):
         if pictures.is_valid(file.file):
             if pic_type == "avatar":
@@ -202,7 +203,8 @@ def add_picture(pic_type: str, file: UploadFile = File(...), user: schemas.UserF
 
 
 @app.patch("/user/{username}", response_model=schemas.Status, responses={404: {"model": schemas.Status}})
-def edit_user(username: str, user: schemas.UserEdit, current_user: schemas.UserBase = Depends(get_current_user), db: Session = Depends(get_db)):
+def edit_user(username: str, user: schemas.UserEdit,
+              current_user: schemas.UserBase = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.username != username:
         return JSONResponse(push_status(False, f"You cannot edit other profiles"), 403)
     if crud.edit_user(db, username, user):
@@ -224,24 +226,14 @@ def delete_user(username: str, passphrase: str = "", db: Session = Depends(get_d
 
 
 @app.delete("/user/{username}/link/{link}", response_model=schemas.Status, responses={404: {"model": schemas.Status}})
-def delete_link(username: str, link: str, current_user: schemas.UserBase = Depends(get_current_user), db: Session = Depends(get_db)):
+def delete_link(username: str, link: str,
+                current_user: schemas.UserShort = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.username != username:
         return JSONResponse(push_status(False, f"You cannot edit other profiles"), 403)
-    user = crud.get_user(db, username=username)
-    if user:
-        if crud.delete_user_link(db, link, user.id):
-            return push_status(True, f"{link} link of user @{username} deleted")
-        else:
-            return JSONResponse(push_status(False, "Link not found for user @" + username), 404)
+    if crud.delete_user_link(db, link, current_user.id):
+        return push_status(True, f"{link} link of user @{username} deleted")
     else:
-        return JSONResponse(push_status(False, "User not found"), 404)
-
-
-def transform_links(links: List[models.Link]) -> dict:
-    result = {}
-    for link in links:
-        result.update({link.name: link.link})
-    return result
+        return JSONResponse(push_status(False, "Link not found for user @" + username), 404)
 
 
 def push_status(status: bool, message: str) -> dict:
