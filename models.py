@@ -17,6 +17,8 @@ class User(Base):
     about = Column(String(10000))
     user_pic = Column(String(100))
     bg_pic = Column(String(100))
+    phone = Column(String(20))
+    public_email = Column(String(50))
 
     link = relationship("Link", back_populates="user", cascade="all, delete", passive_deletes=True)
 

@@ -94,6 +94,7 @@ def test_edit_user():
         "last_name": "Doe",
         "username": "test2_edit",
         "about": "About me",
+        "phone": "+15035265896",
         "links": {
             "telegram": "@test"
         },
@@ -119,6 +120,7 @@ def test_get_user_details_by_username():
     response = client.get("/user/test2_edit", headers=get_headers())
     assert response.json().get("first_name") == "John"
     assert response.json().get("links").get("telegram") == "@tested"
+    assert response.json().get("phone") == "+15035265896"
 
     response_me = client.get("/users/me", headers=get_headers())
     assert response.text == response_me.text

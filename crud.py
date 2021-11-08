@@ -99,6 +99,10 @@ def edit_user(db: Session, username: str, user: schemas.UserEdit):
             user_model.google_id = user.google_id
         if user.about is not None:
             user_model.about = user.about
+        if user.phone is not None:
+            user_model.phone = user.phone
+        if user.public_email is not None:
+            user_model.public_email = user.public_email
 
         db.commit()
 
