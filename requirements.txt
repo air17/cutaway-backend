@@ -5,3 +5,4 @@ sqlalchemy
 mysqlclient
 python-multipart
 Pillow
+python-jose[cryptography]

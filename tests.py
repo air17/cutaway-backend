@@ -11,6 +11,8 @@ from sqlalchemy.orm import sessionmaker
 from main import app, get_db
 from database import Base
 
+# TODO: Add auth
+
 
 @pytest.fixture(scope="session", autouse=True)
 def cleanup(request: pytest.FixtureRequest):

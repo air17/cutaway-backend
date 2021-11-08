@@ -47,3 +47,13 @@ class UserEdit(BaseModel):
 class Status(BaseModel):
     push_status: bool
     message: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class UserAuth(BaseModel):
+    email: str
+    google_auth: str
