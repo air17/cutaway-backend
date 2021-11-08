@@ -46,8 +46,8 @@ client = TestClient(app)
 
 # Getting authentication token and headers
 def get_headers(email="user2@example.com"):
-    response = client.post("/token", json={"email": email, "google_auth": "test"})
-    token = response.json()['access_token']
+    response = client.post("/token", data={"username": email, "password": "test"})
+    token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -59,7 +59,7 @@ def test_create_user():
                 "last_name": f"Doe{i}",
                 "username": f"test{i}"
                 }
-        response = client.post("/users", json=data)
+        response = client.post("/user", json=data)
         assert response.status_code == 200
         assert response.json().get("push_status") is True
 
@@ -68,23 +68,20 @@ def test_create_user():
             "last_name": f"Doe",
             "username": f"noway"
             }
-    response = client.post("/users", json=data)
+    response = client.post("/user", json=data)
     assert response.status_code == 409
     assert response.json().get("push_status") is False
 
     data["username"] = "test1"
-    response = client.post("/users", json=data)
+    response = client.post("/user", json=data)
     assert response.status_code == 409
 
 
 def test_get_token():
-    response = client.post("/token", json={"email": "user0@example.com", "google_auth": "test"})
+    response = client.post("/token", data={"username": "user0@example.com", "password": "test"})
     assert response.status_code == 200
 
-    response = client.post("/token", json={"email": "nouser@example.com", "google_auth": "test"})
-    assert response.status_code == 401
-
-    response = client.post("/token", json={"email": "user@example.com", "google_auth": ""})
+    response = client.post("/token", data={"username": "nouser@example.com", "password": "test"})
     assert response.status_code == 401
 
 
@@ -103,14 +100,11 @@ def test_edit_user():
         }
     }
 
-    response = client.patch("/user/test2", json=data, headers=get_headers())
+    response = client.patch("/user/me", json=data, headers=get_headers())
     assert response.json().get("push_status") is True
 
-    response = client.patch("/user/test2_edit", json={"links": {"telegram": "@tested"}}, headers=get_headers())
+    response = client.patch("/user/me", json={"links": {"telegram": "@tested"}}, headers=get_headers())
     assert response.json().get("push_status") is True
-
-    response = client.patch("/user/test2", json=data, headers=get_headers())
-    assert response.json().get("push_status") is False
 
 
 def test_get_user_details_by_username():
@@ -122,7 +116,7 @@ def test_get_user_details_by_username():
     assert response.json().get("links").get("telegram") == "@tested"
     assert response.json().get("phone") == "+15035265896"
 
-    response_me = client.get("/users/me", headers=get_headers())
+    response_me = client.get("/user/me", headers=get_headers())
     assert response.text == response_me.text
 
 
@@ -155,14 +149,10 @@ def test_get_users_by_username():
 
 
 def test_delete_link():
-    response = client.delete("/user/test1/link/telegram", headers=get_headers())
-    assert response.json().get("push_status") is False
-    assert response.status_code == 403
-
-    response = client.delete("/user/test2_edit/link/telegram", headers=get_headers())
+    response = client.delete("/user/link/telegram", headers=get_headers())
     assert response.json().get("push_status") is True
 
-    response = client.delete("/user/test2_edit/link/telegram", headers=get_headers())
+    response = client.delete("/user/link/telegram", headers=get_headers())
     assert response.json().get("push_status") is False
 
 

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends, FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 import crud
 import models
@@ -82,20 +82,22 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 
 @app.post("/token", response_model=schemas.Token)
-async def get_access_token(user_credentials: schemas.UserAuth, db: Session = Depends(get_db)):
+async def get_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """
     You can get access token here.
 
-    - **email**: Email of the user
-    - **google_auth**: Token received from Google OpenID. Can be any non-empty string for now.
+    - **username**: Email of the user
+    - **password**: Token received from Google OpenID. Can be any non-empty string for now.
     """
-    if not authenticate_google_user(user_credentials.email, user_credentials.google_auth):
+    email = form_data.username
+    google_auth = form_data.password
+    if not authenticate_google_user(email, google_auth):
         raise HTTPException(
             status_code=401,
             detail="Incorrect email or google token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    user = crud.get_user(db, user_email=user_credentials.email)
+    user = crud.get_user(db, user_email=email)
     if not user:
         raise HTTPException(
             status_code=401,
@@ -106,8 +108,8 @@ async def get_access_token(user_credentials: schemas.UserAuth, db: Session = Dep
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@app.get("/users/me", response_model=schemas.UserFull)
-def get_users(current_user: schemas.UserFull = Depends(get_current_user)):
+@app.get("/user/me", response_model=schemas.UserFull)
+def get_current_user_profile(current_user: schemas.UserFull = Depends(get_current_user)):
     return current_user
 
 
@@ -140,12 +142,14 @@ def get_user_details_by_username(username: str, _=Depends(get_current_user), db:
     return user
 
 
-@app.post("/users", response_model=schemas.Status, responses={409: {"model": schemas.Status}})
+@app.post("/user", response_model=schemas.Status, responses={409: {"model": schemas.Status}})
 def create_user(user: schemas.UserBase, db: Session = Depends(get_db)):
     if crud.get_user(db, username=user.username):
         return JSONResponse(push_status(False, f"User @{user.username} already exists"), 409)
     elif crud.get_user(db, user_email=user.email):
         return JSONResponse(push_status(False, "The user with such email already exists"), 409)
+    elif user.username.__len__() < 3:
+        return JSONResponse(push_status(False, "The username is too short"), 422)
     crud.create_user(db, user)
     return push_status(True, f"User @{user.username} created")
 
@@ -202,15 +206,15 @@ def add_picture(pic_type: str, file: UploadFile = File(...),
         return JSONResponse(push_status(False, "The pic_type should be avatar or background"), 400)
 
 
-@app.patch("/user/{username}", response_model=schemas.Status, responses={404: {"model": schemas.Status}})
-def edit_user(username: str, user: schemas.UserEdit,
+@app.patch("/user/me", response_model=schemas.Status, responses={404: {"model": schemas.Status}})
+def edit_user(user: schemas.UserEdit,
               current_user: schemas.UserBase = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.username != username:
-        return JSONResponse(push_status(False, f"You cannot edit other profiles"), 403)
-    if crud.edit_user(db, username, user):
-        return push_status(True, f"User @{username} edited")
+    if user.username and user.username.__len__() < 3:
+        return JSONResponse(push_status(False, "The username is too short"), 422)
+    if crud.edit_user(db, current_user.username, user):
+        return push_status(True, f"User @{current_user.username} profile edited")
     else:
-        return JSONResponse(push_status(False, f"User @{username} not found"), 404)
+        return JSONResponse(push_status(False, f"User @{current_user.username} not found"), 404)
 
 
 @app.delete("/user/{username}", response_model=schemas.Status,
@@ -225,15 +229,13 @@ def delete_user(username: str, passphrase: str = "", db: Session = Depends(get_d
         return JSONResponse(push_status(False, f"You are not allowed"), 403)
 
 
-@app.delete("/user/{username}/link/{link}", response_model=schemas.Status, responses={404: {"model": schemas.Status}})
-def delete_link(username: str, link: str,
+@app.delete("/user/link/{link}", response_model=schemas.Status, responses={404: {"model": schemas.Status}})
+def delete_link(link: str,
                 current_user: schemas.UserShort = Depends(get_current_user), db: Session = Depends(get_db)):
-    if current_user.username != username:
-        return JSONResponse(push_status(False, f"You cannot edit other profiles"), 403)
     if crud.delete_user_link(db, link, current_user.id):
-        return push_status(True, f"{link} link of user @{username} deleted")
+        return push_status(True, f"{link} link of user @{current_user.username} deleted")
     else:
-        return JSONResponse(push_status(False, "Link not found for user @" + username), 404)
+        return JSONResponse(push_status(False, "Link not found for user @" + current_user.username), 404)
 
 
 def push_status(status: bool, message: str) -> dict:
