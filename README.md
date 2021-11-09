@@ -1,6 +1,6 @@
 # Cutaway Backend
 
-REST API server for [Cutaway](https://github.com/cutaway-inc/cutaway) powered by FastAPI and SQLAlchemy.
+REST API server for [Cutaway](https://github.com/cutaway-inc/cutaway) (business card with elements of a social network) powered by FastAPI and SQLAlchemy.
 
 ## Install
 
